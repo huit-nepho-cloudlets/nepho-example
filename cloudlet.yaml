@@ -1,0 +1,12 @@
+--- # nepho-example
+name: example
+version: 0.0.1
+format: 1
+source: git@github.com:cloudlets/nepho-example.git
+author: Harvard University Information Technology
+license: MIT
+summary: An example cloudlet
+description: >
+  This example cloudlet shows how to create and structure your own cloudlets. It
+  is not runnable.
+projectpage: http://github.com/huit/nepho
