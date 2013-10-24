@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+cloudlet_data="/opt/nepho"
+puppet_dir="${cloudlet_data}/common/puppet"
+
+# Make sure we are in the directory of this script
+cd $(dirname "${0}")
+
+pushd "$puppet_dir"
+
+if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
+  for i in first second; do
+    echo "Beginning $i Puppet run"
+    puppet apply --verbose    \
+      --manifestdir manifests \
+      --templatedir templates \
+      --detailed-exitcodes    \
+      --logdest console --logdest ${cloudlet_data}/logs/puppet.log \
+      manifests/init.pp
+    echo "Finished $i Puppet run"
+  done
+fi
+# vim: set ft=sh ts=2 sw=2 ei:

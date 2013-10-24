@@ -2,7 +2,7 @@
 name: development
 summary: Example blueprint.yaml with list of parameter options
 description: This is the long description of the blueprint
-provider: none
+provider: vagrant
 parameters:
   MyParam:
     default: MyValue

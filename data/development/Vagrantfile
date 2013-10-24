@@ -18,16 +18,11 @@ Vagrant.configure('2') do |config|
   config.vm.network :forwarded_port, guest: 80,  host: 8080, auto_correct: true
   config.vm.network :forwarded_port, guest: 443, host: 8443, auto_correct: true
 
-  # Mount a shared folder containing the cloudlet's common files
-  config.vm.synced_folder '../common', '/common'
+  # Mount a shared folder containing the cloudlet's data files
+  config.vm.synced_folder '../../data', '/opt/nepho'
 
-  # Install r10k using the shell provisioner and download the Puppet modules
-  config.vm.provision :shell, :path => 'bootstrap.sh'
-
-  # Puppet provisioner for primary configuration
-  config.vm.provision :puppet do |puppet|
-    puppet.manifests_path = "../common/puppet/manifests"
-    puppet.manifest_file  = "init.pp"
-    puppet.options        = "--verbose --hiera_config /common/hiera/hiera.yaml --modulepath /common/puppet/modules"
-  end
+  # Call Nepho provisioning scripts
+  config.vm.provision :shell, :path => '../../hooks/bootstrap'
+  config.vm.provision :shell, :path => '../../hooks/configure'
+  config.vm.provision :shell, :path => '../../hooks/deploy'
 end

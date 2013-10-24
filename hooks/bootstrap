@@ -1,0 +1,169 @@
+#!/bin/bash
+#
+# Assumptions:
+# - A base OS install including bash is present
+# - Cloudlet data is present (cloned or copied)
+# - We can connect to the internet
+# - We are on a supported OS (Amazon Linux, RHEL, CentOS, Ubuntu, Debian)
+
+set -e
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+epel_mirror="http://download.fedoraproject.org/pub/epel"
+puppet_bootstrap="http://raw.github.com/hashicorp/puppet-bootstrap/master"
+cloudlet_data="/opt/nepho"
+
+# Make sure we are in the directory of this script
+cd $(dirname "${0}")
+
+function detect_os() {
+  if [[ -f /etc/debian_version ]]; then
+    [[ "$(lsb_release -i -s 2>/dev/null)" == "Ubuntu" ]] && OS="ubuntu"
+    [[ "$(lsb_release -i -s 2>/dev/null)" == "Debian" ]] && OS="debian"
+  elif [[ -f /etc/redhat-release ]]; then
+    [[ $(grep -i "release 6" /etc/redhat-release) ]] && OS="rhel6"
+    [[ $(grep -i "release 5" /etc/redhat-release) ]] && OS="rhel5"
+  elif [[ -f /etc/system-release ]]; then
+    OS="amazon"
+  fi
+
+  if [[ "x$OS" == "x" ]]; then
+    echo "Unsupported OS. Aborting bootstrap!"
+    exit 1
+  else
+    echo "Identified OS as ${OS}."
+  fi
+}
+
+function setup_puppet() {
+  case $OS in
+    amazon)
+      # Avoid errors in tools that expect this file
+      if [[ ! -f /etc/redhat-release ]]; then
+        echo "Linking /etc/system-release to /etc/redhat-release"
+        ln -s  /etc/system-release /etc/redhat-release
+      fi
+
+      # Disable priorities plugin, which favors Amazon repos
+      echo "Disabling Yum priorities plugin"
+      echo -e "[main]\nenabled = 0" > /etc/yum/pluginconf.d/priorities.conf
+
+      # Bootstrap Puppet
+      echo "Bootstrapping Puppet"
+      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
+
+      # Fix hostname if it is not properly set
+      if [[ ! -f /etc/hostname ]]; then
+        echo "Fixing hostname"
+        hostname $(/usr/bin/facter -p ec2_hostname)
+        puppet resource host $(facter -p ec2_hostname) ensure=present ip=$(facter -p ec2_local_ipv4)
+      fi
+      ;;
+    debian|ubuntu)
+      # update_rubygems is installed in /usr/local/bin
+      PATH=${PATH}:/usr/local/bin
+
+      echo "Install curl"
+      apt-get install -y curl
+      # Bootstrap Puppet
+      echo "Bootstrapping Puppet"
+      sh -c "$(curl -fsSL ${puppet_bootstrap}/${OS}.sh)"
+      ;;
+    rhel5)
+      # Install EPEL
+      if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
+        echo "Setting up EPEL"
+        rpm -Uv ${epel_mirror}/5/i386/epel-release-5-4.noarch.rpm > /dev/null
+      fi
+
+      # Bootstrap Puppet
+      echo "Bootstrapping Puppet"
+      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_5_x.sh)"
+      ;;
+    rhel6)
+      # Install EPEL
+      if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
+        echo "Setting up EPEL"
+        rpm -Uv ${epel_mirror}/6/i386/epel-release-6-8.noarch.rpm > /dev/null
+      fi
+
+      # Bootstrap Puppet
+      echo "Bootstrapping Puppet"
+      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
+      ;;
+    default)
+      echo "Unsupported OS, aborting bootstrap." && exit 1
+      ;;
+  esac
+}
+
+function install_packages() {
+  case $OS in
+    amazon|rhel5|rhel6)
+      # Enable EPEL repository if it is disabled
+      puppet resource yumrepo epel enabled=1
+      puppet resource package augeas ensure=installed
+      ;;
+    debian|ubuntu)
+      # Enable universe repository if it is disabled
+      if [[ ! $(grep '^deb .* universe$' /etc/apt/sources.list) ]]; then
+        echo "Enabling universe apt repository"
+        add-apt-repository "$(grep '^# deb .* universe$' /etc/apt/sources.list | head -n1 | tr -d "#")"
+      fi
+      puppet resource package augeas-tools ensure=installed
+      ;;
+    default)
+      echo "Unsupported OS, aborting bootstrap." && exit 1
+      ;;
+  esac
+
+  echo "Installing packages"
+  puppet resource package git        ensure=installed
+  puppet resource package rubygems   ensure=installed
+  puppet resource package python-pip ensure=installed
+  puppet resource package awscli     ensure=installed provider=pip
+
+  puppet resource package hiera      ensure=installed
+
+  puppet resource package r10k       ensure=installed provider=gem
+}
+
+function populate_hiera() {
+  echo "Creating hiera configuration"
+  echo -e "---\n:backends:\n  - yaml\n:hierarchy:\n  - common\n\n:yaml:\n  :datadir:" > /etc/hiera.yaml
+
+  if [[ ! -f /etc/puppet/hiera.yaml && -f /etc/hiera.yaml ]]; then
+    echo "Symlinking hiera config into /etc/puppet"
+    ln -s /etc/hiera.yaml /etc/puppet/hiera.yaml
+  fi
+
+  # Popular data from NEPHO_ environment variables
+  if [[ ! -s '/var/lib/hiera/common.yaml' ]]; then
+    echo "Populating hiera data from environment variables"
+    ruby -e "require 'yaml'" -e \
+      "print Hash[ENV.select { |k,v| k =~ /^SSH/ }.map { |i| [ i.first, i.last] } ].to_yaml" \
+      > /var/lib/hiera/common.yaml
+  else
+    echo "Hiera data already present, skipping"
+  fi
+}
+
+function run_r10k() {
+# Use r10k to install Puppet modules
+if [[ -s ${cloudlet_data}/common/puppet/Puppetfile ]]; then
+  echo "Running r10k to download Puppet modules"
+  pushd ${cloudlet_data}/common/puppet
+  HOME=/root PUPPETFILE_DIR=/etc/puppet/modules r10k -v info puppetfile install
+  popd
+else
+  echo "No Puppetfile found, skipping r10k"
+fi
+}
+
+detect_os
+setup_puppet
+install_packages
+populate_hiera
+run_r10k
+
+# vim: set ft=sh ts=2 sw=2 ei:
