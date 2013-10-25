@@ -22,6 +22,7 @@ Vagrant.configure('2') do |config|
   config.vm.synced_folder '../../data', '/opt/nepho'
 
   # Call Nepho provisioning scripts
+  # FIXME: Can we only run if it exists???
   config.vm.provision :shell, :path => '../../hooks/bootstrap'
   config.vm.provision :shell, :path => '../../hooks/configure'
   config.vm.provision :shell, :path => '../../hooks/deploy'

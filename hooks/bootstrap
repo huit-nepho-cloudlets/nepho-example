@@ -6,6 +6,9 @@
 # - We can connect to the internet
 # - We are on a supported OS (Amazon Linux, RHEL, CentOS, Ubuntu, Debian)
 
+## FIXME: Add yum update
+## FIXME: Do we really need to enable universe?
+
 set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
@@ -38,6 +41,9 @@ function detect_os() {
 function setup_puppet() {
   case $OS in
     amazon)
+      # Remove older/unexpected Puppet installations
+      yum -y remove puppet facter hiera
+
       # Avoid errors in tools that expect this file
       if [[ ! -f /etc/redhat-release ]]; then
         echo "Linking /etc/system-release to /etc/redhat-release"
@@ -50,7 +56,7 @@ function setup_puppet() {
 
       # Bootstrap Puppet
       echo "Bootstrapping Puppet"
-      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
+      sh -c "$(curl --retry 3 -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
 
       # Fix hostname if it is not properly set
       if [[ ! -f /etc/hostname ]]; then
@@ -60,6 +66,9 @@ function setup_puppet() {
       fi
       ;;
     debian|ubuntu)
+      # Remove older/unexpected Puppet installations
+      apt-get remove -y puppet facter hiera
+
       # update_rubygems is installed in /usr/local/bin
       PATH=${PATH}:/usr/local/bin
 
@@ -67,9 +76,12 @@ function setup_puppet() {
       apt-get install -y curl
       # Bootstrap Puppet
       echo "Bootstrapping Puppet"
-      sh -c "$(curl -fsSL ${puppet_bootstrap}/${OS}.sh)"
+      sh -c "$(curl --retry 3 -fsSL ${puppet_bootstrap}/${OS}.sh)"
       ;;
     rhel5)
+      # Remove older/unexpected Puppet installations
+      yum -y remove puppet facter hiera
+
       # Install EPEL
       if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
         echo "Setting up EPEL"
@@ -78,9 +90,12 @@ function setup_puppet() {
 
       # Bootstrap Puppet
       echo "Bootstrapping Puppet"
-      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_5_x.sh)"
+      sh -c "$(curl --retry 3 -fsSL ${puppet_bootstrap}/centos_5_x.sh)"
       ;;
     rhel6)
+      # Remove older/unexpected Puppet installations
+      yum -y remove puppet facter hiera
+
       # Install EPEL
       if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
         echo "Setting up EPEL"
@@ -89,7 +104,7 @@ function setup_puppet() {
 
       # Bootstrap Puppet
       echo "Bootstrapping Puppet"
-      sh -c "$(curl -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
+      sh -c "$(curl --retry 3 -fsSL ${puppet_bootstrap}/centos_6_x.sh)"
       ;;
     default)
       echo "Unsupported OS, aborting bootstrap." && exit 1
@@ -102,7 +117,13 @@ function install_packages() {
     amazon|rhel5|rhel6)
       # Enable EPEL repository if it is disabled
       puppet resource yumrepo epel enabled=1
-      puppet resource package augeas ensure=installed
+
+      # Fix for sporatic Amazon Linux RubyGems SSL errors
+      # http://railsapps.github.io/openssl-certificate-verify-failed.html
+      if [ ! -f /root/.gemrc ]; then
+        echo "Disabling SSL verify mode for RubyGems"
+        echo ':ssl_verify_mode: 0' >> /root/.gemrc
+      fi
       ;;
     debian|ubuntu)
       # Enable universe repository if it is disabled
@@ -110,7 +131,6 @@ function install_packages() {
         echo "Enabling universe apt repository"
         add-apt-repository "$(grep '^# deb .* universe$' /etc/apt/sources.list | head -n1 | tr -d "#")"
       fi
-      puppet resource package augeas-tools ensure=installed
       ;;
     default)
       echo "Unsupported OS, aborting bootstrap." && exit 1
@@ -120,11 +140,6 @@ function install_packages() {
   echo "Installing packages"
   puppet resource package git        ensure=installed
   puppet resource package rubygems   ensure=installed
-  puppet resource package python-pip ensure=installed
-  puppet resource package awscli     ensure=installed provider=pip
-
-  puppet resource package hiera      ensure=installed
-
   puppet resource package r10k       ensure=installed provider=gem
 }
 
@@ -141,8 +156,13 @@ function populate_hiera() {
   if [[ ! -s '/var/lib/hiera/common.yaml' ]]; then
     echo "Populating hiera data from environment variables"
     ruby -e "require 'yaml'" -e \
-      "print Hash[ENV.select { |k,v| k =~ /^SSH/ }.map { |i| [ i.first, i.last] } ].to_yaml" \
+      "print Hash[ENV.select { |k,v| k =~ /^NEPHO_/ }.map { |i| [ i.first, i.last] } ].to_yaml" \
       > /var/lib/hiera/common.yaml
+
+    # Symlink hieradata into facter
+    echo "Setting up facter with hiera data"
+    mkdir -p /etc/facter/facts.d
+    ln -s /var/lib/hiera/common.yaml /etc/facter/facts.d/hiera-common.yaml
   else
     echo "Hiera data already present, skipping"
   fi

@@ -15,6 +15,7 @@ if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
   for i in first second; do
     echo "Beginning $i Puppet run"
     puppet apply --verbose    \
+      --modulepath /etc/puppet/modules:modules \
       --manifestdir manifests \
       --templatedir templates \
       --detailed-exitcodes    \
