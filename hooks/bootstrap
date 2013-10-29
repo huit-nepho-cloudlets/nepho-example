@@ -158,7 +158,7 @@ function install_packages() {
 
 function populate_hiera() {
   message info "Creating hiera configuration"
-  message info -e "---\n:backends:\n  - yaml\n:hierarchy:\n  - common\n\n:yaml:\n  :datadir:" > /etc/hiera.yaml
+  echo -e "---\n:backends:\n  - yaml\n:hierarchy:\n  - common\n\n:yaml:\n  :datadir:" > /etc/hiera.yaml
 
   if [[ ! -f /etc/puppet/hiera.yaml && -f /etc/hiera.yaml ]]; then
     message info "Symlinking hiera config into /etc/puppet"
