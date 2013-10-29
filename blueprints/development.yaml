@@ -38,9 +38,9 @@ parameters:
   BoxUrl:
     default: http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box
     description: "Box format must match the chosen Vagrant provider (virtualbox or vmware_fusion)"
-  DataDir:
-    default: /opt/nepho/data
-    description: "Filesystem path where the cloudlet data/ tree is mounted on the instance"
+  NephoDir:
+    default: /opt/nepho
+    description: "Filesystem path where the cloudlet tree is mounted/synced on the instance"
 
 # PARAMETER FORMAT
 # ParamName:
