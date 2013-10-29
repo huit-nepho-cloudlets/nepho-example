@@ -11,13 +11,13 @@ Key Concepts
 
 Hooks
 -----
-**bootstrap**
+**bootstrap**  
 The `bootstrap` hook is the first hook run, and is meant to be run _only once_, to bootstrap an instance to a level where the `configure` hook can be run.  In this example cloudlet, the `bootstrap` hook is a very comprehensive implementation that sets up a stock Debian, Ubuntu, Amazon Linux, Red Hat, or CentOS instance with required packages and configuration to run Puppet.  The `bootstrap` hook should do no more and no less than prepare an instance for the `configure` hook.
 
-**configure**
+**configure**  
 This hook is typically used to launch a configuration management (CM) tool, in this case Puppet.  The `configure` hook should be idempotent, meaning it can be run multiple times and always bring the instance to a desired state, without causing negative effects.  In this example the Puppet process is run twice, which is often good practice due to dependencies and timing errors that can occur on a first run, especially with complex configurations.
 
-**deploy**
+**deploy**  
 The final hook is `deploy`, which is used to prepare an application/service. Examples of the use of the `deploy` hook include downloading and installing executable code, populating a database, joining a cluster, or simply printing instructions for a user to perform these steps manually (or with an existing tool).  The `deploy` hook should be sufficiently robust that it can be run multiple times without causing harm.  In this example, the `deploy` hook is a no-op.
 
 Limitations
