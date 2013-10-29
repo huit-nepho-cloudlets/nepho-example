@@ -11,6 +11,27 @@ parameters:
       Which Vagrant VM provider to use (either virtualbox or vmware_fusion).
       The provider must already be installed and configured/licensed.
     validate: /^(virtualbox|vmware_fusion)$/
+  EpelMirror:
+    default: "http://download.fedoraproject.org/pub/epel"
+    require: False
+    summary: "Mirror location for the Extra Packages for Enterprise Linux repository"
+    description: >
+      Extra Packages for Enterprise Linux provides additional functionality to
+      RHEL, CentOS, and Amazon Linux. Specify a URL for an EPEL mirror location
+      (including any base path, i.e. "http://myserver/pub/epel"). Not used for
+      Debian/Ubuntu instances.
+  UpdatePackages:
+    default: False
+    require: True
+    summary: "Update system packages during bootstrap?"
+    description: >
+      If this option is set to True, system packages will be updated during the
+      bootstrapping process, using the built-in package manager (yum or apt-get)
+  PuppetBootstrap:
+    default: "http://raw.github.com/hashicorp/puppet-bootstrap/master"
+    description: >
+      Location or mirror of Hashicorp's Puppet-Bootstrap shell scripts, used
+      when an instance needs to be bootstrapped with a Puppet install.
   BoxName:
     default: centos-6.4-i386
     description: "Vagrant uses the box name as a primary key, so be sure to change it if you change the URL"
@@ -34,7 +55,7 @@ parameters:
 #   * If a summary is set prompt user.
 #   * If no summary is set, use default value unless explicitly overridden
 #     via command line switch.
-#   * Default value negates "require: False".
+#   * Default value without a summary negates "require: False".
 # * If require is False, parameter is optional, otherwise paramater is required.
 # * If validate is not nil, the final value of the paramater (either the default
 #   or the user input) is validated against the content of "validate" as a

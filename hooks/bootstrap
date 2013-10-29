@@ -10,12 +10,10 @@ prog="bootstrap"
 set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-epel_mirror="http://download.fedoraproject.org/pub/epel"
-puppet_bootstrap="http://raw.github.com/hashicorp/puppet-bootstrap/master"
-cloudlet_data="/opt/nepho"
-
-# Uncomment to run a complete system update
-#update_pkgs=1
+epel_mirror=${NEPHO_EpelMirror-"http://download.fedoraproject.org/pub/epel"}
+puppet_bootstrap=${NEPHO_PuppetBootstrap-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
+data_dir=${NEPHO_DataDir-"/opt/nepho/data"}
+update_pkgs=${NEPHO_UpdatePackages-"False"}
 
 # Make sure we are in the directory of this script
 cd $(dirname "${0}")
@@ -131,7 +129,7 @@ function setup_puppet() {
 function install_packages() {
   case $OS in
     amazon|rhel5|rhel6)
-      if [[ $update_pkgs -eq 1 ]]; then
+      if [[ $update_pkgs == "True" ]]; then
         # Update all local packages
         message info "Updating packages (this may take a while)"
         yum -y -q update
@@ -148,7 +146,7 @@ function install_packages() {
       fi
       ;;
     debian|ubuntu)
-      if [[ $update_pkgs -eq 1 ]]; then
+      if [[ $update_pkgs == "True" ]]; then
         # Update all local packages
         # Bootstrap script runs an apt-get update
         message info "Upgrading packages (this may take a while)"
@@ -194,9 +192,9 @@ function populate_hiera() {
 
 function run_r10k() {
   # Use r10k to install Puppet modules
-  if [[ -s ${cloudlet_data}/common/puppet/Puppetfile ]]; then
+  if [[ -s ${data_dir}/common/puppet/Puppetfile ]]; then
     message info "Running r10k to download Puppet modules"
-    pushd ${cloudlet_data}/common/puppet >/dev/null
+    pushd ${data_dir}/common/puppet >/dev/null
     HOME=/root PUPPETFILE_DIR=/etc/puppet/modules r10k -v info puppetfile install
     popd >/dev/null
   else
