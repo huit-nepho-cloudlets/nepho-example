@@ -4,42 +4,51 @@ summary: Example blueprint.yaml with list of parameter options
 description: This is the long description of the blueprint
 provider: vagrant
 parameters:
-  MyParam:
-    default: MyValue
-    require: True
-    validate: /My[\w]*/
-    description: "Value of your param (should start with \"My\")"
-  DbPassword:
-    default: abc123
-    require: True
-    validate: /[\w]+/
-    description: "Database password"
   VagrantProvider:
     default: virtualbox
-    description: "Which Vagrant VM backend to use (either virtualbox or vmware_fusion)."
-    validate: /(virtualbox|vmware_fusion)/
+    summary: "Choose a Vagrant provider"
+    description: >
+      Which Vagrant VM provider to use (either virtualbox or vmware_fusion).
+      The provider must already be installed and configured/licensed.
+    validate: /^(virtualbox|vmware_fusion)$/
+  BoxName:
+    default: centos-6.4-i386
+    description: "Vagrant uses the box name as a primary key, so be sure to change it if you change the URL"
+  BoxUrl:
+    default: http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box
+    description: "Box format must match the chosen Vagrant provider (virtualbox or vmware_fusion)"
+  DataDir:
+    default: /opt/nepho/data
+    description: "Filesystem path where the cloudlet data/ tree is mounted on the instance"
 
 # PARAMETER FORMAT
 # ParamName:
 #   default: string [default: nil]
 #   require: bool [default: True]
 #   validate: regular expression [default: nil]
+#   summary: string [default: nil]
 #   description: string [default: nil]
 #
 # PARAMETER PROMPTING AND VALIDATION RULES
 # * If a default value is provided
-#   * If a description is set prompt user.
-#   * If no description is set, use default value unless explicitly overridden
+#   * If a summary is set prompt user.
+#   * If no summary is set, use default value unless explicitly overridden
 #     via command line switch.
 #   * Default value negates "require: False".
 # * If require is False, parameter is optional, otherwise paramater is required.
 # * If validate is not nil, the final value of the paramater (either the default
 #   or the user input) is validated against the content of "validate" as a
 #   regular expression. Pass on true (match), error on false.
-# * If description is present, provide it as help text when prompting the user
-#   for input, and when validation fails.
+# * If summary is present, provide it as help text when prompting the user.
+# * If description is present, provide it as help text when validation fails or
+#   when user enters "?".
 #
 # DISPLAY EXAMPLE
+#
 # $ nepho stack create example development
-# Value of your param (should start with "My")
-# MyParam [default: MyValue]: _
+# Choose a Vagrant provider (or ? for help)
+# VagrantProvider [default: virtualbox]: ?
+#
+# Which Vagrant VM provider to use (either virtualbox or vmware_fusion). The
+# provider must already be installed and configured/licensed.
+# VagrantProvider [default: virtualbox]: _
