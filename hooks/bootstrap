@@ -165,7 +165,7 @@ function populate_hiera() {
     ln -s /etc/hiera.yaml /etc/puppet/hiera.yaml
   fi
 
-  # Popular data from NEPHO_ environment variables
+  # Populate data from NEPHO_ environment variables
   if [[ ! -s '/var/lib/hiera/common.yaml' ]]; then
     message info "Populating hiera data from environment variables"
     ruby -e "require 'yaml'" -e \
