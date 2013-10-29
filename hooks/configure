@@ -1,4 +1,5 @@
 #!/bin/bash
+prog="configure"
 
 set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
@@ -9,19 +10,26 @@ puppet_dir="${cloudlet_data}/common/puppet"
 # Make sure we are in the directory of this script
 cd $(dirname "${0}")
 
-pushd "$puppet_dir"
+# Pretty print informational and error messages
+function message() {
+  case $1 in
+    fail ) echo -e "\n\033[0m${prog}: \033[1;31m${2}\033[0m\n" ;;
+    info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m\n" ;;
+  esac
+}
+
+pushd "$puppet_dir" >/dev/null
 
 if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
   for i in first second; do
-    echo "Beginning $i Puppet run"
-    puppet apply --verbose    \
+    message info "Beginning $i Puppet run"
+    puppet apply \
       --modulepath /etc/puppet/modules:modules \
       --manifestdir manifests \
       --templatedir templates \
-      --detailed-exitcodes    \
       --logdest console --logdest ${cloudlet_data}/logs/puppet.log \
       manifests/init.pp
-    echo "Finished $i Puppet run"
+    message info "Finished $i Puppet run"
   done
 fi
 # vim: set ft=sh ts=2 sw=2 ei:
