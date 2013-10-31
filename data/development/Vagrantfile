@@ -2,16 +2,19 @@
 # vi: set ft=ruby :
 
 # Set Nepho variables with defaults
-n_provider  = ENV.fetch('NEPHO_VagrantProvider', 'virtualbox').to_sym
-n_box_name  = ENV.fetch('NEPHO_BoxName',         'centos-6.4-i386')
-n_box_url   = ENV.fetch('NEPHO_BoxUrl',          'http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box')
-n_nepho_dir = ENV.fetch('NEPHO_NephoDir',        '/opt/nepho')
+n_provider   = ENV.fetch('NEPHO_VagrantProvider', 'virtualbox')
+n_box_name   = ENV.fetch('NEPHO_BoxName',   'centos-6.4-i386')
+n_box_url    = ENV.fetch('NEPHO_BoxUrl',    'http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box')
+n_guest_type = ENV.fetch('NEPHO_GuestType', 'linux')
+n_nepho_dir  = ENV.fetch('NEPHO_NephoDir',  '/opt/nepho')
+
+# Vagrant checks the VAGRANT_DEFAULT_PROVIDER to determine provider
+ENV.store('VAGRANT_DEFAULT_PROVIDER', n_provider)
 
 Vagrant.configure('2') do |config|
-  config.vm.provider n_provider do |provider, override|
-    override.vm.box     = n_box_name
-    override.vm.box_url = n_box_url
-  end
+  config.vm.box     = n_box_name
+  config.vm.box_url = n_box_url
+  config.vm.guest   = n_guest_type.to_sym
 
   # Forward standard ports
   config.vm.network :forwarded_port, guest: 80,  host: 8080, auto_correct: true
