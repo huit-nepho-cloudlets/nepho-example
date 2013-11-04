@@ -28,7 +28,7 @@ Vagrant.configure('2') do |config|
 
   # Call Nepho provisioning scripts if they exist and are executable
   ['bootstrap', 'configure', 'deploy'].each do |f|
-    path = File.join(n_nepho_dir, 'hooks', f)
+    path = File.join(n_nepho_dir, 'resources/hooks/common', f)
     config.vm.provision :shell, :inline => \
       "#{n_vars} [[ -x #{path} ]] && (echo Running #{path}; #{path})"
   end
