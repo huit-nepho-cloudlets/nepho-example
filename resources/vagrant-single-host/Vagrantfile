@@ -21,7 +21,7 @@ Vagrant.configure('2') do |config|
   config.vm.network :forwarded_port, guest: 443, host: 8443, auto_correct: true
 
   # Mount a shared folder containing the cloudlet's data files
-  config.vm.synced_folder '.', n_nepho_dir
+  config.vm.synced_folder File.expand_path(File.dirname(__FILE__) + "/../.."), n_nepho_dir
 
   # Prepare NEPHO_ variables to pass to provisioning scripts
   n_vars = ENV.inject("") { |s, i| i.first =~ /^NEPHO_/ ? s << "export #{i.first}=\"#{i.last}\";\n" : s }

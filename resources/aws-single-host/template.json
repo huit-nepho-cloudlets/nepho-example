@@ -1,0 +1,30 @@
+{% import '../common/nepho-aws-stdlib/Parameters/Instance-Parameters.json' as inst_params %}
+{% import '../common/nepho-aws-stdlib/Resources/Host.json'   as host     with context %}
+{% import '../common/nepho-aws-stdlib/Outputs/Host-URL.json' as host_url with context %}
+
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Simple Host Deployment",
+
+  "Parameters" : {
+
+    {% include '../common/nepho-aws-stdlib/Parameters/General-Instance-Parameters.json' %},
+    {% include '../common/nepho-aws-stdlib/Parameters/SES-Parameters.json' %},
+    {{ inst_params.inst_params(name="SingleServer") }}
+
+  },
+
+  "Mappings" : {
+    {% include '../common/nepho-aws-stdlib/Mappings/AWS-Instance-Mappings.json' %}
+  },
+
+  "Resources" : {
+    {{ host.host( name='SingleServer', ports=[80, 443]) }}
+
+  },
+
+  "Outputs" : {
+    {{ host_url.url("SingleServer") }}
+  }
+}

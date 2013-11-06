@@ -1,0 +1,3 @@
+[submodule "resources/common/nepho-aws-stdlib"]
+	path = resources/common/nepho-aws-stdlib
+	url = git@github.com:agperson/nepho-aws-stdlib.git
