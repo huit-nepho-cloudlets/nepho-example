@@ -1,16 +1,10 @@
 ---
-name: development
-summary: Example blueprint.yaml with list of parameter options
-description: This is the long description of the blueprint
-provider: vagrant
+name: development-aws
+summary: Development instance on AWS EC2
+description: This blueprint provisions a single instance on localhost using AWS CloudFormation.
+provider: aws
+pattern: development-aws
 parameters:
-  VagrantProvider:
-    default: virtualbox
-    summary: "Choose a Vagrant provider"
-    description: >
-      Which Vagrant VM provider to use (either virtualbox or vmware_fusion).
-      The provider must already be installed and configured/licensed.
-    validate: /^(virtualbox|vmware_fusion)$/
   EpelMirror:
     default: "http://download.fedoraproject.org/pub/epel"
     require: False
@@ -32,12 +26,6 @@ parameters:
     description: >
       Location or mirror of Hashicorp's Puppet-Bootstrap shell scripts, used
       when an instance needs to be bootstrapped with a Puppet install.
-  BoxName:
-    default: centos-6.4-i386
-    description: "Vagrant uses the box name as a primary key, so be sure to change it if you change the URL"
-  BoxUrl:
-    default: http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box
-    description: "Box format must match the chosen Vagrant provider (virtualbox or vmware_fusion)"
   NephoDir:
     default: /opt/nepho
     description: "Filesystem path where the cloudlet tree is mounted/synced on the instance"
@@ -47,29 +35,22 @@ parameters:
 #   default: string [default: nil]
 #   require: bool [default: True]
 #   validate: regular expression [default: nil]
-#   summary: string [default: nil]
 #   description: string [default: nil]
 #
 # PARAMETER PROMPTING AND VALIDATION RULES
 # * If a default value is provided
-#   * If a summary is set prompt user.
-#   * If no summary is set, use default value unless explicitly overridden
+#   * If a description is set prompt user.
+#   * If no description is set, use default value unless explicitly overridden
 #     via command line switch.
-#   * Default value without a summary negates "require: False".
+#   * Default value negates "require: False".
 # * If require is False, parameter is optional, otherwise paramater is required.
 # * If validate is not nil, the final value of the paramater (either the default
 #   or the user input) is validated against the content of "validate" as a
 #   regular expression. Pass on true (match), error on false.
-# * If summary is present, provide it as help text when prompting the user.
-# * If description is present, provide it as help text when validation fails or
-#   when user enters "?".
+# * If description is present, provide it as help text when prompting the user
+#   for input, and when validation fails.
 #
 # DISPLAY EXAMPLE
-#
 # $ nepho stack create example development
-# Choose a Vagrant provider (or ? for help)
-# VagrantProvider [default: virtualbox]: ?
-#
-# Which Vagrant VM provider to use (either virtualbox or vmware_fusion). The
-# provider must already be installed and configured/licensed.
-# VagrantProvider [default: virtualbox]: _
+# Value of your param (should start with "My")
+# MyParam [default: MyValue]: _
