@@ -1,0 +1,445 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Simple Host Deployment",
+  "Parameters": {
+
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "String"
+    },
+
+    "InstanceType": {
+      "Description": "WebServer EC2 instance type",
+      "Type": "String",
+      "Default": "m1.small",
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    },
+
+    "SingleServerInstanceRole": {
+      "Description": "Role of this set of instances for use in config management bootstrapping.",
+      "Type": "String",
+      "Default": "unspecified"
+    },
+    
+    "SSHAccessRange": {
+      "Description": " The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    }
+  },
+  "Mappings": {
+    "AWSInstanceType2Arch": {
+      "t1.micro": {
+        "Arch": "64"
+      },
+      "m1.small": {
+        "Arch": "64"
+      },
+      "m1.medium": {
+        "Arch": "64"
+      },
+      "m1.large": {
+        "Arch": "64"
+      },
+      "m1.xlarge": {
+        "Arch": "64"
+      },
+      "m2.xlarge": {
+        "Arch": "64"
+      },
+      "m2.2xlarge": {
+        "Arch": "64"
+      },
+      "m2.4xlarge": {
+        "Arch": "64"
+      },
+      "m3.xlarge": {
+        "Arch": "64"
+      },
+      "m3.2xlarge": {
+        "Arch": "64"
+      },
+      "c1.medium": {
+        "Arch": "64"
+      },
+      "c1.xlarge": {
+        "Arch": "64"
+      },
+      "cc1.4xlarge": {
+        "Arch": "64HVM"
+      },
+      "cc2.8xlarge": {
+        "Arch": "64HVM"
+      },
+      "cg1.4xlarge": {
+        "Arch": "64HVM"
+      }
+    },
+    "AWSRegionArch2AMI": {
+      "us-east-1": {
+        "32": "ami-3b355a52",
+        "64": "ami-570f603e",
+        "64HVM": "ami-a73758ce"
+      },
+      "us-west-1": {
+        "32": "ami-cf5bcdff",
+        "64": "ami-5359cf63",
+        "64HVM": "ami-d75bcde7"
+      },
+      "us-west-2": {
+        "32": "ami-31fed174",
+        "64": "ami-c5fed180",
+        "64HVM": "ami-47fed102"
+      },
+      "eu-west-1": {
+        "32": "ami-d5c0d6a1",
+        "64": "ami-d9c0d6ad",
+        "64HVM": "ami-d1c0d6a5"
+      },
+      "ap-southeast-1": {
+        "32": "ami-220b4a70",
+        "64": "ami-3c0b4a6e",
+        "64HVM": "NOT_YET_SUPPORTED"
+      },
+      "ap-southeast-2": {
+        "32": "ami-8f990eb5",
+        "64": "ami-95990eaf",
+        "64HVM": "NOT_YET_SUPPORTED"
+      },
+      "ap-northeast-1": {
+        "32": "ami-2a19aa2b",
+        "64": "ami-2819aa29",
+        "64HVM": "NOT_YET_SUPPORTED"
+      },
+      "sa-east-1": {
+        "32": "ami-f836e8e5",
+        "64": "ami-fe36e8e3",
+        "64HVM": "NOT_YET_SUPPORTED"
+      }
+    }
+  },
+  "Resources": {
+    "SingleServerUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "root",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:DescribeStackResource"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SingleServerKeys": {
+      "Type": "AWS::IAM::AccessKey",
+      "Properties": {
+        "UserName": {
+          "Ref": "SingleServerUser"
+        }
+      }
+    },
+    "SingleServerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group with access for [80, 443]",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": {
+              "Ref": "SSHAccessRange"
+            }
+          }
+        ]
+      }
+    },
+    "SingleServerEndpoint": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "SingleServerInstance"
+        }
+      }
+    },
+    "SingleServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata": {
+        "Comment": "Single host.",
+        "AWS::CloudFormation::Init": {
+          "config": {
+            "packages": {
+              "yum": {
+                "curl": [],
+                "wget": [],
+                "git": []
+              }
+            },
+            "files": {
+              "/etc/aws/credentials": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "[default]\n",
+                      "aws_access_key_id=",
+                      {
+                        "Ref": "SingleServerKeys"
+                      },
+                      "\n",
+                      "aws_secret_access_key=",
+                      {
+                        "Fn::GetAtt": [
+                          "SingleServerKeys",
+                          "SecretAccessKey"
+                        ]
+                      },
+                      "\n",
+                      "region=",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                "mode": "000400",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/profile.d/aws.sh": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "AWS_CONFIG_FILE=/etc/aws/credentials\n",
+                      "export AWS_CONFIG_FILE\n"
+                    ]
+                  ]
+                },
+                "mode": "000664",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/cfn/cfn-credentials": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "AWSAccessKeyId=",
+                      {
+                        "Ref": "SingleServerKeys"
+                      },
+                      "\n",
+                      "AWSSecretKey=",
+                      {
+                        "Fn::GetAtt": [
+                          "SingleServerKeys",
+                          "SecretAccessKey"
+                        ]
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                "mode": "000400",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/cfn/cfn-hup.conf": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "[main]\n",
+                      "stack=",
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      "\n",
+                      "credential-file=/etc/cfn/cfn-credentials\n",
+                      "region=",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                "mode": "000400",
+                "owner": "root",
+                "group": "root"
+              },
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "[cfn-auto-reloader-hook]\n",
+                      "triggers=post.update\n",
+                      "path=Resources.SingleServerInstance.Metadata.AWS::CloudFormation::Init\n",
+                      "action=/opt/aws/bin/cfn-init -s ",
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      " -r SingleServerInstance ",
+                      " --credential-file /etc/cfn/cfn-credentials ",
+                      " --region     ",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "\n",
+                      "runas=root\n"
+                    ]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "ImageId": {
+          "Fn::FindInMap": [
+            "AWSRegionArch2AMI",
+            {
+              "Ref": "AWS::Region"
+            },
+            {
+              "Fn::FindInMap": [
+                "AWSInstanceType2Arch",
+                {
+                  "Ref": "InstanceType"
+                },
+                "Arch"
+              ]
+            }
+          ]
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "SingleServer"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "SingleServerSecurityGroup"
+          }
+        ],
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -v\n",
+                "# Establish CF values and objects into script variables.\n",
+                "export CF_STACK_NAME='",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "'\n",
+                "export CF_REGION='",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "'\n",
+                "export CF_RESOURCE='SingleServerInstance'\n",
+                "export CF_ACCESS_KEY='",
+                {
+                  "Ref": "SingleServerKeys"
+                },
+                "'\n",
+                "export CF_SECRET_KEY='",
+                {
+                  "Fn::GetAtt": [
+                    "SingleServerKeys",
+                    "SecretAccessKey"
+                  ]
+                },
+                "'\n",
+                "export CF_WAIT_HANDLE='",
+                {
+                  "Ref": "SingleServerWaitHandle"
+                },
+                "'\n",
+                "# Inject some NEPHO_* platform variables\n",
+                "export NEPHO_INSTANCE_ROLE='",
+                {
+                  "Ref": "SingleServerInstanceRole"
+                },
+                "'\n",
+                "export NEPHO_EXTERNAL_HOSTNAME=${NEPHO_PUBLIC_HOSTNAME}\n",
+                "export NEPHO_BASE64_CONFIGS=''\n",
+                "export NEPHO_CONFIGS=$( echo ${NEPHO_BASE64_CONFIGS} | base64 --decode )\n",
+                ""
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "SingleServerWaitHandle": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "SingleServerWaitCondition": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "DependsOn": "SingleServerInstance",
+      "Properties": {
+        "Handle": {
+          "Ref": "SingleServerWaitHandle"
+        },
+        "Timeout": "1200"
+      }
+    }
+  },
+  "Outputs": {
+    "URL": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "http://",
+            {
+              "Ref": "SingleServerEndpoint"
+            }
+          ]
+        ]
+      },
+      "Description": "SingleServerApplication URL"
+    }
+  }
+}

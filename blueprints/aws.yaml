@@ -1,0 +1,27 @@
+---
+
+summary: Example blueprint for AWS
+description: This is the long description of the blueprint for AWS
+provider: aws
+parameters:
+  EpelMirror:
+    default: "http://download.fedoraproject.org/pub/epel"
+    require: False
+    summary: "Mirror location for the Extra Packages for Enterprise Linux repository"
+    description: >
+      Extra Packages for Enterprise Linux provides additional functionality to
+      RHEL, CentOS, and Amazon Linux. Specify a URL for an EPEL mirror location
+      (including any base path, i.e. "http://myserver/pub/epel"). Not used for
+      Debian/Ubuntu instances.
+  UpdatePackages:
+    default: False
+    require: True
+    summary: "Update system packages during bootstrap?"
+    description: >
+      If this option is set to True, system packages will be updated during the
+      bootstrapping process, using the built-in package manager (yum or apt-get)
+  PuppetBootstrap:
+    default: "http://raw.github.com/hashicorp/puppet-bootstrap/master"
+    description: >
+      Location or mirror of Hashicorp's Puppet-Bootstrap shell scripts, used
+      when an instance needs to be bootstrapped with a Puppet install.
