@@ -6,7 +6,7 @@ n_provider   = ENV.fetch('NEPHO_VagrantProvider', 'virtualbox')
 n_box_name   = ENV.fetch('NEPHO_BoxName',   'CentOS-6.4-x86_64')
 n_box_url    = ENV.fetch('NEPHO_BoxUrl',    'http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-x86_64-v20130731.box')
 n_guest_type = ENV.fetch('NEPHO_GuestType', 'linux')
-n_nepho_dir  = ENV.fetch('NEPHO_NephoDir',  '/opt/nepho')
+n_nepho_dir  = ENV.fetch('NEPHO_NephoDir',  '/var/lib/nepho')
 
 # Vagrant checks the VAGRANT_DEFAULT_PROVIDER to determine provider
 ENV.store('VAGRANT_DEFAULT_PROVIDER', n_provider)
