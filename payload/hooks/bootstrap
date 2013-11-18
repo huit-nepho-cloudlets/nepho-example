@@ -1,5 +1,11 @@
 #!/bin/bash
 #
+# This bootstrap file assumes a stock Linux OS distro. It bootstraps the system
+# with Puppet and related utilities. Because this process can take several
+# minutes, in some instances it can make sense to run it once, capture the end
+# state (in an ami, box, etc). This script will check to see if it has already
+# run, and, if so, will not run again.
+#
 # Assumptions:
 # - A base OS install including bash is present
 # - Cloudlet data is present (cloned or copied)
@@ -12,8 +18,12 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 epel_mirror=${NEPHO_EpelMirror-"http://download.fedoraproject.org/pub/epel"}
 puppet_bootstrap=${NEPHO_PuppetBootstrap-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
-nepho_dir=${NEPHO_NephoDir-"/opt/nepho"}
+n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
+n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
 update_pkgs=${NEPHO_UpdatePackages-"False"}
+now="$(date '+%F %T')"
+
+echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
 
 # Pretty print informational and error messages
 function message() {
@@ -21,6 +31,8 @@ function message() {
     fail ) echo -e "\n\033[0m${prog}: \033[1;31m${2}\033[0m" ;;
     info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m" ;;
   esac
+
+  echo "${2}" >> ${n_log_dir}/${prog}.log
 }
 
 function detect_os() {

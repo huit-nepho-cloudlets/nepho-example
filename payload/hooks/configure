@@ -1,12 +1,19 @@
 #!/bin/bash
+#
+# This configure hook assumes Puppet is the configuration management system, and
+# kicks off two Puppet runs from a standard location.
+#
 prog="configure"
 
 set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-nepho_dir=${NEPHO_NephoDir-"/opt/nepho"}
-puppet_dir="${nepho_dir}/resources/common/puppet"
-today="$(date '+%Y-%m-%d')"
+n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
+n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
+puppet_dir="${n_payload_dir}/puppet"
+now="$(date '+%F %T')"
+
+echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
 
 # Pretty print informational and error messages
 function message() {
@@ -14,6 +21,8 @@ function message() {
     fail ) echo -e "\n\033[0m${prog}: \033[1;31m${2}\033[0m" ;;
     info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m" ;;
   esac
+
+  echo "${2}" >> ${n_log_dir}/${prog}.log
 }
 
 function run_r10k() {
@@ -37,7 +46,6 @@ function run_puppet() {
       --templatedir templates \
       --logdest console --logdest ${nepho_dir}/data/logs/puppet.${today}.log \
       manifests/init.pp
-    message info "Finished $i Puppet run"
   fi
   popd >/dev/null
 }
