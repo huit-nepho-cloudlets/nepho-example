@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# This configure hook assumes Puppet is the configuration management system, and
+# kicks off two Puppet runs from a standard location.
+#
+prog="configure"
+
+set -e
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
+n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
+puppet_dir="${n_payload_dir}/puppet"
+now="$(date '+%F %T')"
+
+echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
+
+# Pretty print informational and error messages
+function message() {
+  case $1 in
+    fail ) echo -e "\n\033[0m${prog}: \033[1;31m${2}\033[0m" ;;
+    info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m" ;;
+  esac
+
+  echo "${2}" >> ${n_log_dir}/${prog}.log
+}
+
+function run_r10k() {
+  # Use r10k to install Puppet modules
+  if [[ -s ${puppet_dir}/Puppetfile ]]; then
+    message info "Running r10k to download Puppet modules"
+    pushd "${puppet_dir}" >/dev/null
+    HOME=/root PUPPETFILE_DIR=/etc/puppet/modules r10k -v info puppetfile install
+    popd >/dev/null
+  else
+    message info "No Puppetfile found, skipping r10k"
+  fi
+}
+
+function run_puppet() {
+  pushd "$puppet_dir" >/dev/null
+  if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
+    puppet apply \
+      --modulepath /etc/puppet/modules:modules \
+      --manifestdir manifests \
+      --templatedir templates \
+      --logdest console --logdest ${n_log_dir}/puppet.${today}.log \
+      manifests/init.pp
+  fi
+  popd >/dev/null
+}
+
+# Make sure we are in the directory of this script
+cd $(dirname "${0}")
+
+run_r10k
+message info "Beginning first Puppet run"
+run_puppet
+message info "Beginning second Puppet run"
+run_puppet
+
+# vim: set ft=sh ts=2 sw=2 ei:
