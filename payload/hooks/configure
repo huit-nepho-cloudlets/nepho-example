@@ -44,7 +44,7 @@ function run_puppet() {
       --modulepath /etc/puppet/modules:modules \
       --manifestdir manifests \
       --templatedir templates \
-      --logdest console --logdest ${nepho_dir}/data/logs/puppet.${today}.log \
+      --logdest console --logdest ${n_log_dir}/puppet.${today}.log \
       manifests/init.pp
   fi
   popd >/dev/null

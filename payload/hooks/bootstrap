@@ -23,6 +23,7 @@ n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
 update_pkgs=${NEPHO_UpdatePackages-"False"}
 now="$(date '+%F %T')"
 
+mkdir -p ${n_log_dir}
 echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
 
 # Pretty print informational and error messages
