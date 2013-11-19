@@ -1,5 +1,4 @@
 --- # nepho-example
-name: example
 version: 0.0.1
 format: 1
 source: git@github.com:cloudlets/nepho-example.git

@@ -5,9 +5,6 @@ description: >
   CloudFormation, bootstraps Puppet, and performs a few minor configuration
   actions.
 provider: aws
-template_dirs:
-  - resources/aws-single-host
-  - resources/common/nepho-aws-stdlib
 parameters:
   KeyName: cloudhacks-dsilverman
   InstanceType: t1.micro
