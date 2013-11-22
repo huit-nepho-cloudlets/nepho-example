@@ -61,12 +61,6 @@ function setup_puppet() {
       # Remove older/unexpected Puppet installations
       yum remove -y -q puppet facter hiera
 
-      # Avoid errors in tools that expect this file
-      if [[ ! -f /etc/redhat-release ]]; then
-        message info "Linking /etc/system-release -> /etc/redhat-release"
-        ln -s /etc/system-release /etc/redhat-release || true
-      fi
-
       # Disable priorities plugin, which favors Amazon repos
       message info "Disabling yum priorities plugin"
       echo -e "[main]\nenabled = 0" > /etc/yum/pluginconf.d/priorities.conf
