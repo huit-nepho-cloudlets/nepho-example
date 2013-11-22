@@ -1,4 +1,4 @@
---- # nepho blueprint for aws-single-host
+--- # aws-single-host
 summary: A single Amazon Linux host on a public IP
 description: >
   This simple example creates a single public Amazon Linux instance on EC2 using
@@ -6,5 +6,5 @@ description: >
   actions.
 provider: aws
 parameters:
-  KeyName: cloudhacks-dsilverman
-  InstanceType: t1.micro
+  KeyName: default
+  InstanceType: m1.small
