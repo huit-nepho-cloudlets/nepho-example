@@ -11,7 +11,7 @@ PATH=/bin:/usr/bin:/sbin:/usr/sbin
 n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
 n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
 puppet_dir="${n_payload_dir}/puppet"
-now="$(date '+%F %T')"
+now="$(date '+%F_%T')"
 
 echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
 
@@ -44,7 +44,7 @@ function run_puppet() {
       --modulepath /etc/puppet/modules:modules \
       --manifestdir manifests \
       --templatedir templates \
-      --logdest console --logdest ${n_log_dir}/puppet.${today}.log \
+      --logdest console --logdest ${n_log_dir}/puppet.${now}.log \
       manifests/init.pp
   fi
   popd >/dev/null
