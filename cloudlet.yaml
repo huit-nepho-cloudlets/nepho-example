@@ -1,12 +1,12 @@
 --- # nepho-example
-version: 0.0.1
+version: 0.1.0
 format: 1
 source: git@github.com:cloudlets/nepho-example.git
 author: Harvard University Information Technology
 license: MIT
-summary: An example cloudlet that provides a base Vagrant box.
+summary: An example cloudlet that provides a basic host.
 description: >
-  This example cloudlet shows how to create and structure your own cloudlets. It
-  currently includes runnable Vagrant configuration, and may be expanded in the
-  future with other provider implementations.
+  This example cloudlet shows how to create and structure your own cloudlets.
+  It currently includes runnable Vagrant and AWS configuration, and may be
+  expanded in the future with other provider implementations.
 projectpage: http://github.com/huit/nepho
