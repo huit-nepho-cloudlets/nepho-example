@@ -13,4 +13,3 @@ description: >
 projectpage: http://github.com/huit/nepho
 parameters:
   AWSRegion: us-east-1
-  KeyName: default

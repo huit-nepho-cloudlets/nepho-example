@@ -6,5 +6,4 @@ description: >
   actions.
 provider: aws
 parameters:
-  KeyName: default
   InstanceType: m1.small
