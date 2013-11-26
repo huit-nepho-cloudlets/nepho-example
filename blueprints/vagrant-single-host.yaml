@@ -5,7 +5,6 @@ description: >
   Puppet, and performs a few minor configuration actions.
 provider: vagrant
 parameters:
-  VagrantProvider: virtualbox
   EpelMirror: "http://download.fedoraproject.org/pub/epel"
   UpdatePackages: False
   PuppetBootstrap: "http://raw.github.com/hashicorp/puppet-bootstrap/master"
