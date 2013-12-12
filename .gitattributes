@@ -1,0 +1,10 @@
+# Set default behaviour, in case users don't have core.autocrlf set.
+* text=auto
+
+# payload files that get transmitted to Linux hosts
+bootstrap text eol=lf
+configure text eol=lf
+deploy text eol=lf
+teardown text eol=lf
+Puppetfile text eol=lf
+*.json text eol=lf
