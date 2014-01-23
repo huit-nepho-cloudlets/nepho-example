@@ -7,3 +7,4 @@ description: >
 provider: aws
 parameters:
   InstanceType: m1.small
+  AWSRegion: us-east-1

@@ -6,14 +6,16 @@
 prog="configure"
 
 set -e
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
+export TMPDIR=/var/tmp
 
 n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
 n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
 puppet_dir="${n_payload_dir}/puppet"
-now="$(date '+%F_%T')"
+hiera_dir="${n_payload_dir}/hiera"
 
-echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
+mkdir -p ${n_log_dir}
+log="${n_log_dir}/${prog}.log"
 
 # Pretty print informational and error messages
 function message() {
@@ -22,18 +24,17 @@ function message() {
     info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m" ;;
   esac
 
-  echo "${2}" >> ${n_log_dir}/${prog}.log
+  echo "  [${1}] ${2}" >> "${log}"
 }
 
-function run_r10k() {
-  # Use r10k to install Puppet modules
+function run_librarian() {
   if [[ -s ${puppet_dir}/Puppetfile ]]; then
-    message info "Running r10k to download Puppet modules"
+    message info "Running librarian-puppet to download Puppet modules"
     pushd "${puppet_dir}" >/dev/null
-    HOME=/root PUPPETFILE_DIR=/etc/puppet/modules r10k -v info puppetfile install
+    HOME=/root LIBRARIAN_PUPPET_PATH=/etc/puppet/modules librarian-puppet install >> "${log}"
     popd >/dev/null
   else
-    message info "No Puppetfile found, skipping r10k"
+    message info "No Puppetfile found, skipping librarian-puppet"
   fi
 }
 
@@ -41,10 +42,10 @@ function run_puppet() {
   pushd "$puppet_dir" >/dev/null
   if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
     puppet apply \
-      --modulepath /etc/puppet/modules:modules \
+      --modulepath /etc/puppet/modules:internal_modules \
       --manifestdir manifests \
       --templatedir templates \
-      --logdest console --logdest ${n_log_dir}/puppet.${now}.log \
+      --logdest console --logdest "${n_log_dir}/puppet.$(date '+%F %T').log" \
       manifests/init.pp
   fi
   popd >/dev/null
@@ -53,10 +54,14 @@ function run_puppet() {
 # Make sure we are in the directory of this script
 cd $(dirname "${0}")
 
-run_r10k
+message info "Beginning run at $(date '+%F %T')"
+
+run_librarian
 message info "Beginning first Puppet run"
 run_puppet
 message info "Beginning second Puppet run"
 run_puppet
+
+message info "Run complete at $(date '+%F %T')"
 
 # vim: set ft=sh ts=2 sw=2 ei:

@@ -1,5 +1,7 @@
 node default {
-  stage { 'pre': before => Stage['main'] }
-  class { 'epel': stage => 'pre' }
+  # Setup pre and post run stages
+  stage { ['pre', 'post']: }
+  Stage['pre'] -> Stage['main'] -> Stage['post']
+
   class { 'common': }
 }

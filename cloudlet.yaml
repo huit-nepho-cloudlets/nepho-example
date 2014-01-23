@@ -1,5 +1,5 @@
 --- # nepho-example
-version: 1.0.0
+version: 1.1.0
 format: 1
 source: https://github.com:cloudlets/nepho-example.git
 author: Harvard University Information Technology
@@ -12,4 +12,5 @@ description: >
   point for building your own cloudlets.
 projectpage: http://github.com/huit/nepho
 parameters:
-  AWSRegion: us-east-1
+  NephoPayloadDir: /var/lib/nepho
+  NephoLogDir: /var/log/nepho

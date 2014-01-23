@@ -1,0 +1,11 @@
+---
+:backends:
+  - yaml
+:hierarchy:
+  - defaults
+  - common
+
+:logger: console
+
+:yaml:
+  :datadir: "/var/lib/nepho/hiera"

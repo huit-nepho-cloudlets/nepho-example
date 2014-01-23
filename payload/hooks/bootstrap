@@ -15,16 +15,16 @@ prog="bootstrap"
 
 set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export TMPDIR=/var/tmp
 
-epel_mirror=${NEPHO_EpelMirror-"http://download.fedoraproject.org/pub/epel"}
-puppet_bootstrap=${NEPHO_PuppetBootstrap-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
+setup_puppet=${NEPHO_SetupPuppet-"True"}
+puppet_bootstrap_repo=${NEPHO_PuppetBootstrapRepo-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
 n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
 n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
 update_pkgs=${NEPHO_UpdatePackages-"False"}
-now="$(date '+%F %T')"
 
 mkdir -p ${n_log_dir}
-echo "Beginning run at ${now}" >> ${n_log_dir}/${prog}.log
+log="${n_log_dir}/${prog}.log"
 
 # Pretty print informational and error messages
 function message() {
@@ -33,7 +33,7 @@ function message() {
     info ) echo -e "\n\033[0m${prog}: \033[1;34m${2}\033[0m" ;;
   esac
 
-  echo "${2}" >> ${n_log_dir}/${prog}.log
+  echo "  [${1}] ${2}" >> "${log}"
 }
 
 function detect_os() {
@@ -55,19 +55,37 @@ function detect_os() {
   fi
 }
 
+function update_packages() {
+  if [[ $update_pkgs == "True" ]]; then
+    message info "Updating packages (this may take a while)"
+    case $OS in
+      amazon|rhel5|rhel6)
+        yum -y -q update >> "${log}" 2>&1
+        ;;
+      debian|ubuntu)
+        apt-get -y -q upgrade >> "${log}" 2>&1
+        ;;
+      default)
+        message fail "Unsupported OS, aborting bootstrap."
+        exit 1
+        ;;
+    esac
+  fi
+}
+
 function setup_puppet() {
   case $OS in
     amazon)
-      # Remove older/unexpected Puppet installations
-      yum remove -y -q puppet facter hiera
-
       # Disable priorities plugin, which favors Amazon repos
       message info "Disabling yum priorities plugin"
       echo -e "[main]\nenabled = 0" > /etc/yum/pluginconf.d/priorities.conf
 
       # Bootstrap Puppet
       message info "Bootstrapping Puppet"
-      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap}/centos_6_x.sh)"
+      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap_repo}/centos_6_x.sh)" >> "${log}"
+
+      message info "Enabling yum priorities plugin"
+      echo -e "[main]\nenabled = 1" > /etc/yum/pluginconf.d/priorities.conf
 
       # Fix hostname if it is not properly set
       if [[ ! -f /etc/hostname ]]; then
@@ -78,44 +96,33 @@ function setup_puppet() {
       ;;
     debian|ubuntu)
       # Remove older/unexpected Puppet installations
-      apt-get remove -y -q puppet facter hiera
+      apt-get remove -y -q puppet facter hiera >> "${log}" 2>&1
 
       # update_rubygems is installed in /usr/local/bin
       PATH=${PATH}:/usr/local/bin
 
       message info "Install curl"
-      apt-get install -y -q curl
+      apt-get install -y -q curl >> "${log}" 2>&1
+
       # Bootstrap Puppet
       message info "Bootstrapping Puppet"
-      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap}/${OS}.sh)"
+      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap_repo}/${OS}.sh)" >> "${log}" 2>&1
       ;;
     rhel5)
       # Remove older/unexpected Puppet installations
-      yum remove -y -q puppet facter hiera
-
-      # Install EPEL
-      if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
-        message info "Setting up EPEL"
-        rpm -Uv ${epel_mirror}/5/i386/epel-release-5-4.noarch.rpm >/dev/null
-      fi
+      yum remove -y -q puppet facter hiera >> "${log}" 2>&1
 
       # Bootstrap Puppet
       message info "Bootstrapping Puppet"
-      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap}/centos_5_x.sh)"
+      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap_repo}/centos_5_x.sh)" >> "${log}" 2>&1
       ;;
     rhel6)
       # Remove older/unexpected Puppet installations
-      yum remove -y -q puppet facter hiera
-
-      # Install EPEL
-      if [[ ! -f /etc/yum.repos.d/epel.repo ]]; then
-        message info "Setting up EPEL"
-        rpm -Uv ${epel_mirror}/6/i386/epel-release-6-8.noarch.rpm >/dev/null
-      fi
+      yum remove -y -q puppet facter hiera >> "${log}" 2>&1
 
       # Bootstrap Puppet
       message info "Bootstrapping Puppet"
-      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap}/centos_6_x.sh)"
+      sh -c "$(curl --retry 3 --fail --silent --show-error --location ${puppet_bootstrap_repo}/centos_6_x.sh)" >> "${log}" 2>&1
       ;;
     default)
       message fail "Unsupported OS, aborting bootstrap."
@@ -124,32 +131,24 @@ function setup_puppet() {
   esac
 }
 
-function install_packages() {
+function install_prereqs() {
   case $OS in
-    amazon|rhel5|rhel6)
-      if [[ $update_pkgs == "True" ]]; then
-        # Update all local packages
-        message info "Updating packages (this may take a while)"
-        yum -y -q update
-      fi
-
-      # Enable EPEL repository if it is disabled
-      puppet resource yumrepo epel enabled=1 >/dev/null
-
+    amazon)
       # Fix for sporatic Amazon Linux RubyGems SSL errors
       # http://railsapps.github.io/openssl-certificate-verify-failed.html
       if [ ! -f /root/.gemrc ]; then
         message info "Disabling SSL verify mode for RubyGems"
         echo ':ssl_verify_mode: 0' >> /root/.gemrc
       fi
+
+      # Some badly-behaved modules require this, and its not bad to have
+      puppet resource package redhat-lsb-core ensure=installed >>"$log" 2>&1
+      ;;
+    rhel5|rhel6)
+      message info "No additional package configuration for rhel"
       ;;
     debian|ubuntu)
-      if [[ $update_pkgs == "True" ]]; then
-        # Update all local packages
-        # Bootstrap script runs an apt-get update
-        message info "Upgrading packages (this may take a while)"
-        apt-get -y -q upgrade
-      fi
+      message info "No additional package configuration for debian/ubuntu"
       ;;
     default)
       message fail "Unsupported OS, aborting bootstrap."
@@ -157,51 +156,53 @@ function install_packages() {
       ;;
   esac
 
-  message info "Installing packages"
-  puppet resource package git        ensure=installed >/dev/null
-  puppet resource package rubygems   ensure=installed >/dev/null
-  puppet resource package r10k       ensure=installed provider=gem >/dev/null
+  message info "Installing prerequisites"
+  puppet resource package git              ensure=installed >>"$log" 2>&1
+  puppet resource package rubygems         ensure=installed >>"$log" 2>&1
+  puppet resource package librarian-puppet ensure=installed provider=gem >>"$log" 2>&1
+
+  if [[ "$(facter nepho_awsregion)" ]]; then
+    message info "Install AWS CLI tools"
+    puppet resource package python-pip       ensure=installed >>"$log" 2>&1
+    puppet resource package awscli           ensure=installed provider=pip >>"$log" 2>&1
+  fi
 }
 
-function populate_hiera() {
-  message info "Creating hiera configuration"
-  echo -e "---\n:backends:\n  - yaml\n:hierarchy:\n  - common\n\n:yaml:\n  :datadir:" > /etc/hiera.yaml
-
-  if [[ ! -f /etc/puppet/hiera.yaml && -f /etc/hiera.yaml ]]; then
-    message info "Symlinking hiera config into /etc/puppet"
-    ln -s /etc/hiera.yaml /etc/puppet/hiera.yaml
+function setup_hiera() {
+  if [[ -f "${n_payload_dir}/hiera.yaml" ]]; then
+    message info "Symlinking cloudlet hiera config into default locations"
+    rm -f /etc/hiera.yaml /etc/puppet/hiera.yaml
+    ln -s "${n_payload_dir}/hiera.yaml" /etc/hiera.yaml
+    ln -s "${n_payload_dir}/hiera.yaml" /etc/puppet/hiera.yaml
   fi
+}
 
+function populate_facter() {
   # Populate data from NEPHO_ environment variables
-  if [[ ! -s '/var/lib/hiera/common.yaml' ]]; then
-    message info "Populating hiera data from environment variables"
-    ruby -e "require 'yaml'" -e \
-      "print Hash[ENV.select { |k,v| k =~ /^NEPHO_/ }.map { |i| [ i.first, i.last] } ].to_yaml" \
-      > /var/lib/hiera/common.yaml
-
-    # Symlink hieradata into facter
-    message info "Setting up facter with hiera data"
-    mkdir -p /etc/facter/facts.d
-    ln -s /var/lib/hiera/common.yaml /etc/facter/facts.d/hiera-common.yaml
-  else
-    message info "Hiera data already present, skipping"
-  fi
+  message info "Populating facter data from environment variables"
+  mkdir -p /etc/facter/facts.d
+  ruby -e "require 'yaml'" -e "print Hash[ENV.select { |k,v| k =~ /^NEPHO_/ }.map { |i| [ i.first, i.last] } ].to_yaml" > /etc/facter/facts.d/nepho.yaml
 }
 
 # Make sure we are in the directory of this script
 cd $(dirname "${0}")
 
+message info "Beginning run at $(date '+%F %T')"
+
 # Make sure that this script has not already run successfully
 if [[ -f /.nepho-bootstrap ]]; then
   message fail "Bootstrap has already run on this instance."
-  exit 0
+else
+  detect_os
+  update_packages
+  [[ "${setup_puppet}" != "False" ]] && setup_puppet
+  setup_hiera
+  install_prereqs
+  date > /.nepho-bootstrap
 fi
 
-detect_os
-setup_puppet
-install_packages
-populate_hiera
+populate_facter
 
-date > /.nepho-bootstrap
+message info "Run complete at $(date '+%F %T')"
 
 # vim: set ft=sh ts=2 sw=2 ei:
