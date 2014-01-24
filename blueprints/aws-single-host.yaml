@@ -1,7 +1,7 @@
 --- # aws-single-host
 summary: A single Amazon Linux host on a public IP
 description: >
-  This simple example creates a single public Amazon Linux instance on EC2 using
+  This example creates a single public Amazon Linux instance on EC2 using
   CloudFormation, bootstraps Puppet, and performs a few minor configuration
   actions.
 provider: aws

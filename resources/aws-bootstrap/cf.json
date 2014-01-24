@@ -1,0 +1,131 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Bootstrapped Amazon Linux 2013-09",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern" : "[\\x20-\\x7E]*",
+      "ConstraintDescription" : "can contain only ASCII characters."
+    },
+
+    "InstanceType":       { "Type": "String", "Default": "m1.small" },
+    "PayloadURL":         { "Type": "String" },
+    "OwnerId":            { "Type": "String" },
+    "OwnerName":          { "Type": "String" },
+    "AWSAccessKeyID":     { "Type": "String" },
+    "AWSSecretAccessKey": { "Type": "String", "NoEcho": "True" },
+    "AWSRegion":          { "Type": "String" }
+  },
+
+  "Mappings": {
+    {% include 'Mappings/Instance-Amazon-Linux.json' %}
+  },
+
+  "Resources" : {
+    "BootstrapInstance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "sources" : {
+              "/var/lib/nepho" : {"Ref": "PayloadURL"}
+            },
+            "commands": {
+              "0-set-permissions": {
+                "command": "chmod +x hooks/*",
+                "cwd": "/var/lib/nepho",
+                "ignoreErrors": "true"
+              },
+              "1-bootstrap": {
+                "command": "/var/lib/nepho/hooks/bootstrap",
+                "test": "test -e /var/lib/nepho/hooks/bootstrap",
+                "ignoreErrors": "false"
+              },
+              "2-create-image": {
+                "command": "aws ec2 create-image --instance-id \"$(curl -fs http://169.254.169.254/latest/meta-data/instance-id)\" --name \"Bootstrapped Amazon Linux 2013-09\" --no-reboot > /var/log/nepho/create-image.log",
+                "env": {
+                    "AWS_DEFAULT_REGION": { "Ref": "AWS::Region" },
+                    "AWS_ACCESS_KEY_ID": { "Ref": "AWSAccessKeyID" },
+                    "AWS_SECRET_ACCESS_KEY": { "Ref": "AWSSecretAccessKey" }
+                },
+                "ignoreErrors": "false"
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+        "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+        "KeyName": { "Ref": "KeyName" },
+        "InstanceType": { "Ref": "InstanceType" },
+        "ImageId": {
+            "Fn::FindInMap": [
+                "AmazonLinux201309Ebs",
+                { "Ref": "AWS::Region" },
+                "64"
+            ]
+        },
+        "Tags": [
+            { "Key": "Name", "Value": "Bootstrapped Amazon Linux 2013-09" },
+            { "Key": "NephoBaseAmiMapping", "Value": "AmazonLinux201309Ebs" },
+            { "Key": "OwnerId", "Value": { "Ref": "OwnerId" } },
+            { "Key": "OwnerName", "Value": { "Ref": "OwnerName" } }
+        ],
+        "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash\n",
+          "PATH=\"$PATH:/opt/aws/bin\"\n",
+          {%- for k, v in env_vars().items() %}
+          "export NEPHO_{{k}}=\"{{v}}\"\n",
+          {%- endfor %}
+          "cfn-init -v",
+            " --stack ", { "Ref" : "AWS::StackId" },
+            " --resource BootstrapInstance",
+            " --region ", { "Ref" : "AWS::Region" }, "\n",
+          "cfn-signal",
+            " --exit-code=$?",
+            " --data=\"$(grep -Po 'ami-[a-z0-9]+' /var/log/nepho/create-image.log)\"",
+            " \"", { "Ref" : "WaitHandle" }, "\"\n"
+        ]]}}
+      }
+    },
+
+    "WaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+    "BootstrapWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "BootstrapInstance",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitHandle"},
+        "Timeout" : "900"
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access and HTTP/HTTPS access on the inbound port",
+        "SecurityGroupIngress": [
+          { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "BootstrappedAmiId": {
+        "Description": "AMI ID of new bootstrapped image",
+        "Value": { "Fn::GetAtt": [ "BootstrapWaitCondition", "Data" ] }
+    },
+    "Message" : {
+      "Description" : "Information about the bootstrapping process",
+      "Value" : "Bootstrapping process complete. A new AMI has been created. You can now delete this stack without affecting the new AMI."
+    }
+  }
+
+}

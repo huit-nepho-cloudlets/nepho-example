@@ -1,0 +1,155 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "Simple Instance",
+
+  "Parameters" : {
+    "KeyName":             { "Type": "String" },
+    "InstanceType":        { "Type": "String" },
+    "PayloadURL":          { "Type": "String" },
+    "OwnerId":             { "Type": "String" },
+    "OwnerName":           { "Type": "String" },
+    "NephoPayloadDir":     { "Type": "String" },
+    "NephoLogDir":         { "Type": "String" },
+    "AWSAccessKeyID":      { "Type": "String" },
+    "AWSSecretAccessKey":  { "Type": "String", "NoEcho": "True" },
+    "AWSRegion":           { "Type": "String" }
+  },
+
+  "Mappings": {
+    "AmazonLinux201309Ebs": {
+      "ap-northeast-1": {
+        "32": "ami-97fe9b96", "64": "ami-b1fe9bb0"
+      },
+      "ap-southeast-1": {
+        "32": "ami-5896c30a", "64": "ami-4296c310"
+      },
+      "ap-southeast-2": {
+        "32": "ami-017be73b", "64": "ami-717be74b"
+      },
+      "eu-west-1": {
+        "32": "ami-efec0e98", "64": "ami-c7ec0eb0"
+      },
+      "sa-east-1": {
+        "32": "ami-3f79df22", "64": "ami-8779df9a"
+      },
+      "us-east-1": {
+        "32": "ami-cde4bca4", "64": "ami-83e4bcea"
+      },
+      "us-west-1": {
+        "32": "ami-fa1f29bf", "64": "ami-981f29dd"
+      },
+      "us-west-2": {
+        "32": "ami-4c1c847c", "64": "ami-be1c848e"
+      }
+    }
+  },
+
+  "Resources" : {
+    "Ec2Instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "sources" : {
+              "/var/lib/nepho" : {"Ref": "PayloadURL"}
+            },
+            "commands": {
+              "0-set-permissions": {
+                "command": "chmod +x hooks/*",
+                "cwd": "/var/lib/nepho",
+                "ignoreErrors": "true"
+              },
+              "1-bootstrap": {
+                "command": "/var/lib/nepho/hooks/bootstrap",
+                "test": "test -e /var/lib/nepho/hooks/bootstrap",
+                "ignoreErrors": "false"
+              },
+              "2-configure": {
+                "command": "/var/lib/nepho/hooks/configure",
+                "test": "test -e /var/lib/nepho/hooks/configure",
+                "ignoreErrors": "false"
+              },
+              "3-deploy": {
+                "command": "/var/lib/nepho/hooks/deploy",
+                "test": "test -e /var/lib/nepho/hooks/deploy",
+                "ignoreErrors": "false"
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+        "SecurityGroups": [ { "Ref": "InstanceSecurityGroup" } ],
+        "KeyName": { "Ref": "KeyName" },
+        "InstanceType": { "Ref": "InstanceType" },
+        "ImageId": { "Ref": "ImageId" },
+        "ImageId": { "Fn::FindInMap": [
+          "AmazonLinux201309Ebs", { "Ref": "AWS::Region" }, "64"
+        ] },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join": [
+            "-", [ { "Ref": "OwnerName" }, "aws-simple" ]
+          ] } },
+          { "Key": "OwnerId", "Value": { "Ref": "OwnerId" } },
+          { "Key": "OwnerName", "Value": { "Ref": "OwnerName" } }
+        ],
+        "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash\n",
+          "PATH=\"$PATH:/opt/aws/bin\"\n",
+          {%- for k, v in env_vars().items() %}
+          "export NEPHO_{{k}}=\"{{v}}\"\n",
+          {%- endfor %}
+          "cfn-init -v",
+            " --stack ", { "Ref" : "AWS::StackId" },
+            " --resource Ec2Instance",
+            " --region ", { "Ref" : "AWS::Region" }, "\n",
+          "cfn-signal",
+            " --exit-code=$?",
+            " \"", { "Ref" : "WaitHandle" }, "\"\n"
+        ]]}}
+      }
+    },
+
+    "MyEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "InstanceId": { "Ref": "Ec2Instance" }
+      }
+    },
+
+    "WaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+    "WaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "Ec2Instance",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitHandle"},
+        "Timeout" : "900"
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access and HTTP access on the inbound port",
+        "SecurityGroupIngress": [
+          { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"},
+          { "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "InstanceId" : {
+      "Value" : { "Ref" : "Ec2Instance" },
+      "Description" : "Instance ID of newly created instance"
+    },
+    "PublicIp": {
+      "Value": { "Ref": "MyEIP" },
+      "Description": "Elastic IP of newly created instance"
+    }
+  }
+}

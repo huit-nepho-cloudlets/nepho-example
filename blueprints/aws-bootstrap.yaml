@@ -1,0 +1,12 @@
+--- # aws-bootstrap
+summary: Bootstrap an Amazon Linux image and create an AMI
+description: >
+  Run this blueprint first to create an Amazon Linux AMI in your region that is
+  pre-bootstrapped with Puppet. Pass the AMI ID to other blueprints to speed
+  the provisioning process by bypassing bootstrap steps.
+provider: aws
+parameters:
+  InstanceType: m1.small
+  UpdatePackages: True
+  SetupPuppet: True
+  AWSRegion: us-east-1

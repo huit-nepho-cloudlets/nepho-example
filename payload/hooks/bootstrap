@@ -2,13 +2,13 @@
 #
 # This bootstrap file assumes a stock Linux OS distro. It bootstraps the system
 # with Puppet and related utilities. Because this process can take several
-# minutes, in some instances it can make sense to run it once, capture the end
-# state (in an ami, box, etc). This script will check to see if it has already
-# run, and, if so, will not run again.
+# minutes, in some instances it can make sense to run it once and capture the
+# end state (ami, box, etc). This script will check to see if it has already
+# run, and, if so, will only populate Facter and not run any other steps.
 #
 # Assumptions:
 # - A base OS install including bash is present
-# - Cloudlet data is present (cloned or copied)
+# - Cloudlet payload is present
 # - We can connect to the internet
 # - We are on a supported OS (Amazon Linux, RHEL, CentOS, Ubuntu, Debian)
 prog="bootstrap"
@@ -17,11 +17,11 @@ set -e
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 export TMPDIR=/var/tmp
 
-setup_puppet=${NEPHO_SetupPuppet-"True"}
-puppet_bootstrap_repo=${NEPHO_PuppetBootstrapRepo-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
 n_payload_dir=${NEPHO_NephoPayloadDir-"/var/lib/nepho"}
 n_log_dir=${NEPHO_NephoLogDir-"/var/log/nepho"}
+setup_puppet=${NEPHO_SetupPuppet-"True"}
 update_pkgs=${NEPHO_UpdatePackages-"False"}
+puppet_bootstrap_repo=${NEPHO_PuppetBootstrapRepo-"http://raw.github.com/hashicorp/puppet-bootstrap/master"}
 
 mkdir -p ${n_log_dir}
 log="${n_log_dir}/${prog}.log"
@@ -56,21 +56,19 @@ function detect_os() {
 }
 
 function update_packages() {
-  if [[ $update_pkgs == "True" ]]; then
-    message info "Updating packages (this may take a while)"
-    case $OS in
-      amazon|rhel5|rhel6)
-        yum -y -q update >> "${log}" 2>&1
-        ;;
-      debian|ubuntu)
-        apt-get -y -q upgrade >> "${log}" 2>&1
-        ;;
-      default)
-        message fail "Unsupported OS, aborting bootstrap."
-        exit 1
-        ;;
-    esac
-  fi
+  message info "Updating packages (this may take a while)"
+  case $OS in
+    amazon|rhel5|rhel6)
+      yum -y -q update >> "${log}" 2>&1
+      ;;
+    debian|ubuntu)
+      apt-get -y -q upgrade >> "${log}" 2>&1
+      ;;
+    default)
+      message fail "Unsupported OS, aborting bootstrap."
+      exit 1
+      ;;
+  esac
 }
 
 function setup_puppet() {
@@ -161,7 +159,7 @@ function install_prereqs() {
   puppet resource package rubygems         ensure=installed >>"$log" 2>&1
   puppet resource package librarian-puppet ensure=installed provider=gem >>"$log" 2>&1
 
-  if [[ "$(facter nepho_awsregion)" ]]; then
+  if [[ "$(facter ec2_instance_id)" ]]; then
     message info "Install AWS CLI tools"
     puppet resource package python-pip       ensure=installed >>"$log" 2>&1
     puppet resource package awscli           ensure=installed provider=pip >>"$log" 2>&1
@@ -194,7 +192,7 @@ if [[ -f /.nepho-bootstrap ]]; then
   message fail "Bootstrap has already run on this instance."
 else
   detect_os
-  update_packages
+  [[ "${update_pkgs}" != "False" ]] && update_packages
   [[ "${setup_puppet}" != "False" ]] && setup_puppet
   setup_hiera
   install_prereqs

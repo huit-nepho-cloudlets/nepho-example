@@ -1,0 +1,11 @@
+--- # aws-simple
+summary: A simplified single host configuration
+description: >
+  This simple example creates a single public Amazon Linux instance on EC2 using
+  CloudFormation, bootstraps Puppet, and performs a few minor configuration
+  actions.  It relies only minimally on Jinja2 templating, so that all of the
+  CloudFormation configuration is clear and easily modifiable.
+provider: aws
+parameters:
+  InstanceType: t1.micro
+  AWSRegion: us-east-1
