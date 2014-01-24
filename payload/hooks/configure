@@ -42,7 +42,7 @@ function run_puppet() {
   pushd "$puppet_dir" >/dev/null
   if [[ -f manifests/init.pp && -r manifests/init.pp ]]; then
     puppet apply \
-      --modulepath /etc/puppet/modules:internal_modules \
+      --modulepath /etc/puppet/modules \
       --manifestdir manifests \
       --templatedir templates \
       --logdest console --logdest "${n_log_dir}/puppet.$(date '+%F %T').log" \
