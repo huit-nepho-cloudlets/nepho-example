@@ -1,9 +1,9 @@
-ENV.store('VAGRANT_DEFAULT_PROVIDER', '{{ parameters.VagrantBackend|default('virtualbox') }}' )
+ENV.store('VAGRANT_DEFAULT_PROVIDER', '{{ parameters.VagrantBackend|default("virtualbox") }}' )
 
 Vagrant.configure('2') do |config|
   config.vm.box     = '{{ parameters.BoxName }}'
   config.vm.box_url = '{{ parameters.BoxUrl }}'
-  config.vm.guest   = '{{ parameters.GuestType|default('linux') }}'.to_sym
+  config.vm.guest   = '{{ parameters.GuestType|default("linux") }}'.to_sym
 
   # Forward standard ports
   config.vm.network :forwarded_port, guest: 80,  host: 8080, auto_correct: true
