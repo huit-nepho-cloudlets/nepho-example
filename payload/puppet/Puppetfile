@@ -1,4 +1,4 @@
-forge 'forge.puppetlabs.com'
+forge 'http://forge.puppetlabs.com'
 
 mod 'common',
   :git => 'https://github.com/huit/puppet-common.git'
