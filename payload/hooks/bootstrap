@@ -75,6 +75,7 @@ function setup_puppet() {
   # Enable ec2_* facts in VPC environments
   # See: http://projects.puppetlabs.com/issues/7559
   message info "Enabling EC2 facts for VPCs"
+  mkdir -p $(ruby -e 'puts $LOAD_PATH.first')
   curl -O https://gist.github.com/agperson/8696051/raw/10bf5c3e5e6452c82dc6edc03ebad22be283f906/ec2_vpc.rb > $(ruby -e 'puts $LOAD_PATH.first')/facter/ec2_vpc.rb
 
   case $OS in
