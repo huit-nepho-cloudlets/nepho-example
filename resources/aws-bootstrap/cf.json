@@ -3,20 +3,16 @@
   "Description" : "Bootstrapped Amazon Linux 2013-09",
 
   "Parameters" : {
-    "KeyName": {
-      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
-      "Type": "String",
-      "MinLength": "1",
-      "MaxLength": "255",
-      "AllowedPattern" : "[\\x20-\\x7E]*",
-      "ConstraintDescription" : "can contain only ASCII characters."
-    },
-
-    "InstanceType":       { "Type": "String", "Default": "m1.small" },
-    "PayloadURL":         { "Type": "String" },
-    "AWSAccessKeyID":     { "Type": "String" },
-    "AWSSecretAccessKey": { "Type": "String", "NoEcho": "True" },
-    "AWSRegion":          { "Type": "String" }
+    "KeyName":             { "Type": "String" },
+    "InstanceType":        { "Type": "String", "Default": "m1.small" },
+    "PayloadURL":          { "Type": "String" },
+    "NephoPayloadDir":     { "Type": "String" },
+    "NephoLogDir":         { "Type": "String" },
+    "UpdatePackages":      { "Type": "String" },
+    "SetupPuppet":         { "Type": "String" },
+    "AWSAccessKeyID":      { "Type": "String" },
+    "AWSSecretAccessKey":  { "Type": "String", "NoEcho": "True" },
+    "AWSRegion":           { "Type": "String" }
   },
 
   "Mappings": {

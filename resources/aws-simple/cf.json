@@ -8,6 +8,8 @@
     "PayloadURL":          { "Type": "String" },
     "NephoPayloadDir":     { "Type": "String" },
     "NephoLogDir":         { "Type": "String" },
+    "Role":                { "Type": "String" },
+    "Environment":         { "Type": "String" },
     "AWSAccessKeyID":      { "Type": "String" },
     "AWSSecretAccessKey":  { "Type": "String", "NoEcho": "True" },
     "AWSRegion":           { "Type": "String" }
@@ -47,8 +49,12 @@
       "Type" : "AWS::EC2::Instance",
       "Metadata" : {
         "AWS::CloudFormation::Init" : {
-          "config" : {
-            "sources" : {
+          "configSets": {
+            "create": [ "create-config" ],
+            "update": [ "update-config" ]
+          },
+          "create-config": {
+            "sources": {
               "/var/lib/nepho" : {"Ref": "PayloadURL"}
             },
             "commands": {
@@ -65,12 +71,59 @@
               "2-configure": {
                 "command": "/var/lib/nepho/hooks/configure",
                 "test": "test -e /var/lib/nepho/hooks/configure",
-                "ignoreErrors": "false"
+                "ignoreErrors": "true"
               },
               "3-deploy": {
                 "command": "/var/lib/nepho/hooks/deploy",
                 "test": "test -e /var/lib/nepho/hooks/deploy",
-                "ignoreErrors": "false"
+                "ignoreErrors": "true"
+              }
+            },
+            "files": {
+              "/etc/cfn/cfn-hup.conf" : {
+                "content" : { "Fn::Join" : ["", [
+                  "[main]\n",
+                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
+                  "region=", { "Ref" : "AWS::Region" }, "\n"
+                ]]},
+                "mode"    : "000400",
+                "owner"   : "root",
+                "group"   : "root"
+              },
+              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
+                "content": { "Fn::Join" : ["", [
+                  "[cfn-auto-reloader-hook]\n",
+                  "triggers=post.update\n",
+                  "path=Resources.Ec2Instance.Metadata.AWS::CloudFormation::Init\n",
+                  "action=cfn-init -v",
+                    " --stack ", { "Ref" : "AWS::StackId" },
+                    " --resource Ec2Instance",
+                    " --region ", { "Ref" : "AWS::Region" },
+                    " --configsets update\n",
+                  "runas=root\n"
+                ]]}
+              }
+            }
+          },
+          "update-config": {
+            "sources": {
+              "/var/lib/nepho" : {"Ref": "PayloadURL"}
+            },
+            "commands": {
+              "0-set-permissions": {
+                "command": "chmod +x hooks/*",
+                "cwd": "/var/lib/nepho",
+                "ignoreErrors": "true"
+              },
+              "2-configure": {
+                "command": "/var/lib/nepho/hooks/configure",
+                "test": "test -e /var/lib/nepho/hooks/configure",
+                "ignoreErrors": "true"
+              },
+              "3-deploy": {
+                "command": "/var/lib/nepho/hooks/deploy",
+                "test": "test -e /var/lib/nepho/hooks/deploy",
+                "ignoreErrors": "true"
               }
             }
           }
@@ -85,9 +138,9 @@
           "AmazonLinux201309Ebs", { "Ref": "AWS::Region" }, "64"
         ] },
         "Tags": [
-          { "Key": "Name", "Value": { "Fn::Join": [
-            "-", [ { "Ref": "OwnerName" }, "aws-simple" ]
-          ] } },
+            { "Key": "Name", "Value": "Simple Instance" },
+            { "Key": "Role", "Value": { "Ref": "Role" } },
+            { "Key": "Environment", "Value": { "Ref": "Environment" } }
         ],
         "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
           "#!/bin/bash\n",
@@ -98,7 +151,8 @@
           "cfn-init -v",
             " --stack ", { "Ref" : "AWS::StackId" },
             " --resource Ec2Instance",
-            " --region ", { "Ref" : "AWS::Region" }, "\n",
+            " --region ", { "Ref" : "AWS::Region" },
+            " --configsets create\n",
           "cfn-signal",
             " --exit-code=$?",
             " \"", { "Ref" : "WaitHandle" }, "\"\n"
