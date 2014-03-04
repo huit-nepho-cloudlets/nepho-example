@@ -1,7 +1,7 @@
 nepho-example
 =============
 
-This is an example cloudlet for [nepho](http://github.com/huit/nepho) that demonstrates key concepts and structure.
+This is an example cloudlet for [nepho](http://github.com/huit/nepho) that demonstrates key concepts and structure. To get started with your own cloudlet, fork this example and customize it to meet your needs.
 
 Key Concepts
 ------------
@@ -33,7 +33,7 @@ This blueprint spins up a single Amazon Linux instance, runs the bootstrap seque
 This blueprint creates a single Amazon Linux host and ties it to an elastic IP and a security group.  It also demonstrates the use of wait conditions.  The CloudFormation template is generated from a collection of Jinja2 template snippets, which you can take advantage of to simplify repetitive CloudFormation syntax.  You can view the full generated template along with validation information by running `nepho stack validate`, or dump it to a file by piping the output of `nepho stack show-template`.
 
 **aws-simple**
-This blueprint is similar to the `aws-single-host` example, but has fewer moving parts and relies only minimally on Jinja2 templating.  It launches a single micro instance and assigns it an elastic IP and a security group permitting access to ports 22 (SSH) and 80 (HTTP).  An exercise to the user is using the `aws-simple` blueprint to deploy a simple website.  Hint: there is no need to rely on Puppet or complicated bootstrap scripts.  Instead, make the `bootstrap` hook a no-op and create a minimal `configure` hook in Bash that installs and runs Apache.
+This blueprint is similar to the `aws-single-host` example, but has fewer moving parts and relies only minimally on Jinja2 templating.  It launches a single micro instance and assigns it an elastic IP and a security group permitting access to ports 22 (SSH) and 80 (HTTP).  An exercise to the user is using the `aws-simple` blueprint to deploy a simple website.  Hint: there is no need to rely on Puppet or complicated bootstrap scripts for such a simple use case.  Instead, make the `bootstrap` hook a no-op and create a minimal `configure` hook in Bash that installs and runs Apache.
 
 **vagrant-single-host**
 Launch a local Vagrant instance running CentOS 6.  This blueprint demonstrates how to run the bootstrapping sequence with Vagrant and how to pass in Nepho parameters as environment variables.
@@ -44,4 +44,4 @@ Recommended Best Practices
 
 Limitations
 -----------
-- Vagrant does not natively support running actions on shutdown, so the `teardown` hook is not fired. Implementing this functionality will require a Vagrant plugin.
+- The `teardown` hook is currently unimplemented in both AWS and Vagrant. Future Vagrant functionality will allow for firing a `teardown` action as part of `vagrant destroy`.
