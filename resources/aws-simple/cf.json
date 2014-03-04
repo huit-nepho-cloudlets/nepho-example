@@ -6,8 +6,6 @@
     "KeyName":             { "Type": "String" },
     "InstanceType":        { "Type": "String" },
     "PayloadURL":          { "Type": "String" },
-    "OwnerId":             { "Type": "String" },
-    "OwnerName":           { "Type": "String" },
     "NephoPayloadDir":     { "Type": "String" },
     "NephoLogDir":         { "Type": "String" },
     "AWSAccessKeyID":      { "Type": "String" },
@@ -90,8 +88,6 @@
           { "Key": "Name", "Value": { "Fn::Join": [
             "-", [ { "Ref": "OwnerName" }, "aws-simple" ]
           ] } },
-          { "Key": "OwnerId", "Value": { "Ref": "OwnerId" } },
-          { "Key": "OwnerName", "Value": { "Ref": "OwnerName" } }
         ],
         "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
           "#!/bin/bash\n",

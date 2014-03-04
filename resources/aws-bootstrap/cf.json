@@ -14,8 +14,6 @@
 
     "InstanceType":       { "Type": "String", "Default": "m1.small" },
     "PayloadURL":         { "Type": "String" },
-    "OwnerId":            { "Type": "String" },
-    "OwnerName":          { "Type": "String" },
     "AWSAccessKeyID":     { "Type": "String" },
     "AWSSecretAccessKey": { "Type": "String", "NoEcho": "True" },
     "AWSRegion":          { "Type": "String" }
@@ -72,8 +70,6 @@
         "Tags": [
             { "Key": "Name", "Value": "Bootstrapped Amazon Linux 2013-09" },
             { "Key": "NephoBaseAmiMapping", "Value": "AmazonLinux201309Ebs" },
-            { "Key": "OwnerId", "Value": { "Ref": "OwnerId" } },
-            { "Key": "OwnerName", "Value": { "Ref": "OwnerName" } }
         ],
         "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
           "#!/bin/bash\n",
