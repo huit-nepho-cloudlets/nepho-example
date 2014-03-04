@@ -3,9 +3,10 @@
   - yaml
 :hierarchy:
   - defaults
+  - "role/%{nepho_role}"
   - common
 
 :logger: console
 
 :yaml:
-  :datadir: "/var/lib/nepho/hiera"
+  :datadir: "/var/lib/nepho/hieradata"

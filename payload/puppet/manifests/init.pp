@@ -3,5 +3,12 @@ node default {
   stage { ['pre', 'post']: }
   Stage['pre'] -> Stage['main'] -> Stage['post']
 
-  class { 'common': }
+  # Apply role from fact or hieradata
+  if $::nepho_role == undef {
+    notice('Applying default role')
+    include ::role
+  } else {
+    notice("Applying role ${::nepho_role}")
+    include "::role::${::nepho_role}"
+  }
 }
