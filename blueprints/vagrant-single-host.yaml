@@ -11,3 +11,5 @@ parameters:
   PuppetBootstrap: "http://raw.github.com/hashicorp/puppet-bootstrap/master"
   BoxName: CentOS-6.4-x86_64
   BoxUrl: "http://developer.nrel.gov/downloads/vagrant-boxes/CentOS-6.4-i386-v20130731.box"
+  Environment: development
+  Role: none

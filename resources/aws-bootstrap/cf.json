@@ -65,7 +65,7 @@
         },
         "Tags": [
             { "Key": "Name", "Value": "Bootstrapped Amazon Linux 2013-09" },
-            { "Key": "NephoBaseAmiMapping", "Value": "AmazonLinux201309Ebs" },
+            { "Key": "NephoBaseAmiMapping", "Value": "AmazonLinux201309Ebs" }
         ],
         "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
           "#!/bin/bash\n",

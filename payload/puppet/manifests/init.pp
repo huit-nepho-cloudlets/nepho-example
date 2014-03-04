@@ -4,7 +4,7 @@ node default {
   Stage['pre'] -> Stage['main'] -> Stage['post']
 
   # Apply role from fact or hieradata
-  if $::nepho_role == undef {
+  if $::nepho_role == undef or $::nepho_role == 'none' {
     notice('Applying default role')
     include ::role
   } else {
