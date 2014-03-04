@@ -1,4 +1,8 @@
 class base {
-  # Nice to have
-  package { ['tmux', 'elinks', 'htop']: }
+  include epel
+
+  package { ['tmux', 'elinks', 'htop']:
+    ensure  => present,
+    require => Class['epel'],
+  }
 }
