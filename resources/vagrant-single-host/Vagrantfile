@@ -3,24 +3,40 @@ ENV.store('VAGRANT_DEFAULT_PROVIDER', '{{ parameters.VagrantBackend|default("vir
 Vagrant.configure('2') do |config|
   config.vm.box     = '{{ parameters.BoxName }}'
   config.vm.box_url = '{{ parameters.BoxUrl }}'
-  config.vm.guest   = '{{ parameters.GuestType|default("linux") }}'.to_sym
+  # Vagrant 1.2.3 bug -- private networking does not work with explicity guest
+  # set to "linux"
+  #config.vm.guest   = '{{ parameters.GuestType|default("linux") }}'.to_sym
 
   # Forward standard ports
   config.vm.network :forwarded_port, guest: 80,  host: 8080, auto_correct: true
   config.vm.network :forwarded_port, guest: 443, host: 8443, auto_correct: true
+
+  config.vm.hostname = '{{ parameters.Role }}.local'
+
+  # Assign a static private IP address
+  config.vm.network :private_network, ip: '{{ parameters.VagrantStaticIp|default("172.16.10.10") }}'
+
+  # Set default RAM for VirtualBox
+  config.vm.provider :virtualbox do |v|
+    v.memory = '{{ parameters.VagrantMemory|default("1024") }}'
+  end
 
   # Mount a shared folder containing the cloudlet's data files
   config.vm.synced_folder 'payload', '{{ parameters.NephoPayloadDir }}'
 
   # Call Nepho provisioning scripts if they exist and are executable
   ['bootstrap', 'configure', 'deploy'].each do |f|
-    path = File.join('{{ parameters.NephoPayloadDir }}', 'hooks', f)
-    config.vm.provision :shell, :inline => <<-SCRIPT
-      {%- for k, v in env_vars().items() %}
-      export NEPHO_{{k}}='{{v}}'
-      {%- endfor %}
-      [[ -x #{path} ]] && (echo Running #{path}; #{path})
-    SCRIPT
+    h_path = File.join('payload', 'hooks', f)
+    i_path = File.join('{{ parameters.NephoPayloadDir }}', 'hooks', f)
+    if File.exists?(h_path) then
+      config.vm.provision :shell, :inline => <<-SCRIPT
+        {%- for k, v in env_vars().items() %}
+        export NEPHO_{{k}}='{{v}}'
+        {%- endfor %}
+        echo -e "\033[0;33mRunning hook #{f} (#{i_path})\033[0m"
+        #{i_path}
+      SCRIPT
+    end
   end
 end
 
